@@ -1,7 +1,19 @@
 #!/bin/bash
 
-[ -z ${RUST_DIR:-}             ] && { echo "must set env var RUST_DIR to location of rust compiler checkout"; exit 1; }
-[ command -v rustc 2>/dev/null ] && { echo "a 'rustc' binary must be available on PATH"; exit 1; }
+set -eu
+
+USAGE="$0 <rustc_dir> <out_dir> <source_file> [args...]"
+function die() { printf "%s\n" "error: $@"; exit 1; }
+
+[ $# -lt 3 ] && die "$USAGE"
+RUST_DIR=$1
+OUT_DIR=$2
+SOURCE_FILE=$3
+shift 3
+[ ! -d "$RUST_DIR" ] && die "$USAGE\n<rustc_dir=$RUST_DIR> must be a valid directory"
+mkdir -p "$OUT_DIR" 2>/dev/null && die "$USAGE\nunable to create <out_dir=$OUT_DIR>"
+[ ! -f "$SOURCE_FILE" ] && die "$USAGE\nunable to find <source_file=$SOURCE_FILE>"
+[ command -v rustc 2>/dev/null ] && die "$USAGE\nrustc binary must be available on PATH"
 
 ARCH=$(rustc -vV | grep '^host' | grep -o '[^: ]*$')
 LLVM_COMPONENTS="aarch64 aarch64asmparser aarch64codegen aarch64desc aarch64disassembler aarch64info aarch64utils aggressiveinstcombine all all-targets analysis arm armasmparser armcodegen armdesc armdisassembler arminfo armutils asmparser asmprinter avr avrasmparser avrcodegen avrdesc avrdisassembler avrinfo binaryformat bitreader bitstreamreader bitwriter bpf bpfasmparser bpfcodegen bpfdesc bpfdisassembler bpfinfo cfguard codegen codegentypes core coroutines coverage csky cskyasmparser cskycodegen cskydesc cskydisassembler cskyinfo debuginfobtf debuginfocodeview debuginfodwarf debuginfogsym debuginfologicalview debuginfomsf debuginfopdb demangle dlltooldriver dwarflinker dwarflinkerclassic dwarflinkerparallel dwp engine executionengine extensions filecheck frontenddriver frontendhlsl frontendoffloading frontendopenacc frontendopenmp fuzzercli fuzzmutate globalisel hexagon hexagonasmparser hexagoncodegen hexagondesc hexagondisassembler hexagoninfo hipstdpar instcombine instrumentation interfacestub interpreter ipo irprinter irreader jitlink libdriver lineeditor linker loongarch loongarchasmparser loongarchcodegen loongarchdesc loongarchdisassembler loongarchinfo lto m68k m68kasmparser m68kcodegen m68kdesc m68kdisassembler m68kinfo mc mca mcdisassembler mcjit mcparser mips mipsasmparser mipscodegen mipsdesc mipsdisassembler mipsinfo mirparser msp430 msp430asmparser msp430codegen msp430desc msp430disassembler msp430info native nativecodegen nvptx nvptxcodegen nvptxdesc nvptxinfo objcarcopts objcopy object objectyaml option orcdebugging orcjit orcshared orctargetprocess passes powerpc powerpcasmparser powerpccodegen powerpcdesc powerpcdisassembler powerpcinfo profiledata remarks riscv riscvasmparser riscvcodegen riscvdesc riscvdisassembler riscvinfo riscvtargetmca runtimedyld scalaropts selectiondag sparc sparcasmparser sparccodegen sparcdesc sparcdisassembler sparcinfo support symbolize systemz systemzasmparser systemzcodegen systemzdesc systemzdisassembler systemzinfo tablegen target targetparser textapi textapibinaryreader transformutils vectorize webassembly webassemblyasmparser webassemblycodegen webassemblydesc webassemblydisassembler webassemblyinfo webassemblyutils windowsdriver windowsmanifest x86 x86asmparser x86codegen x86desc x86disassembler x86info x86targetmca xray"
@@ -27,7 +39,6 @@ RUST_TEST_TMPDIR="$RUST_DIR/build/tmp"                                          
 "--run-lib-path"       "$RUST_DIR/build/$ARCH/stage1/lib/rustlib/$ARCH/lib"                                        \
 "--rustc-path"         "$RUST_DIR/build/$ARCH/stage1/bin/rustc"                                                    \
 "--src-base"           "$RUST_DIR/tests/ui"                                                                        \
-"--build-base"         "$RUST_DIR/build/$ARCH/test/ui"                                                             \
 "--sysroot-base"       "$RUST_DIR/build/$ARCH/stage1"                                                              \
 "--stage-id"           "stage1-$ARCH"                                                                              \
 "--suite"              "ui"                                                                                        \
@@ -60,4 +71,5 @@ RUST_TEST_TMPDIR="$RUST_DIR/build/tmp"                                          
 "--nightly-branch"     "master"                                                                                    \
 "--json"                                                                                                           \
 "--verbose"                                                                                                        \
+"--build-base"         "$OUT_DIR"
 "$@"
