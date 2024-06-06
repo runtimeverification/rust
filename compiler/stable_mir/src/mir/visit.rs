@@ -117,14 +117,6 @@ pub trait MirVisitor {
         self.super_binder(binder)
     }
 
-    fn visit_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
-        self.super_alias_ty(kind, ty, location)
-    }
-
-    fn visit_alias_projection(&mut self, ty: &AliasTy) {
-        self.super_alias_projection(ty)
-    }
-
     fn visit_constant(&mut self, constant: &Constant, location: Location) {
         self.super_constant(constant, location)
     }
@@ -414,21 +406,6 @@ pub trait MirVisitor {
         } 
     }
 
-    fn super_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
-        let _ = location;
-
-        match kind {
-            AliasKind::Projection => self.visit_alias_projection(ty),
-            AliasKind::Inherent => {},
-            AliasKind::Opaque => {},
-            AliasKind::Weak => {},
-        }
-    }
-
-    fn super_alias_projection(&mut self, ty: &AliasTy) {
-        let _ = ty;
-    }
-
     fn super_constant(&mut self, constant: &Constant, location: Location) {
         let Constant { span, user_ty: _, literal } = constant;
         self.visit_span(span);
@@ -680,6 +657,57 @@ pub trait MirVisitor {
     fn super_coroutine_witness(&mut self, def: &CoroutineWitnessDef, args: &GenericArgs){
         let _ = def;
         let _ = args;
+        todo!()
+    }
+
+    // Alias
+    fn visit_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+        self.super_alias_ty(kind, ty, location)
+    }
+
+    fn visit_alias_projection(&mut self, ty: &AliasTy) {
+        self.super_alias_projection(ty)
+    }
+
+    fn visit_alias_inherent(&mut self, ty: &AliasTy) {
+        self.super_alias_inherent(ty)
+    }
+
+    fn visit_alias_opaque(&mut self, ty: &AliasTy) {
+        self.super_alias_opaque(ty)
+    }
+
+    fn visit_alias_weak(&mut self, ty: &AliasTy) {
+        self.super_alias_weak(ty)
+    }
+
+    fn super_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+        let _ = location;
+
+        match kind {
+            AliasKind::Projection => self.visit_alias_projection(ty),
+            AliasKind::Inherent => self.visit_alias_inherent(ty),
+            AliasKind::Opaque => self.visit_alias_opaque(ty),
+            AliasKind::Weak => self.visit_alias_weak(ty),
+        }
+    }
+
+    fn super_alias_projection(&mut self, ty: &AliasTy) {
+        let _ = ty;
+        todo!()
+    }
+
+    fn super_alias_inherent(&mut self, ty: &AliasTy) {
+        let _ = ty;
+        todo!()
+    }
+    fn super_alias_opaque(&mut self, ty: &AliasTy) {
+        let _ = ty;
+        todo!()
+    }
+
+    fn super_alias_weak(&mut self, ty: &AliasTy) {
+        let _ = ty;
         todo!()
     }
 }
