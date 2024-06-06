@@ -166,9 +166,7 @@ pub enum ItemKind {
     Const,
     Ctor(CtorKind),
 }
-}
 
-derive_serialize! {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum CtorKind {
     Const,
