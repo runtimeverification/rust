@@ -584,13 +584,13 @@ pub trait MirVisitor {
     fn super_adt(&mut self, def: &AdtDef, args: &GenericArgs) {
         let _ = def;
         let _ = args;
-        todo!()
+        // todo!()
     }
 
     fn super_array(&mut self, ty: &Ty, constant: &Const) {
         let _ = ty;
         let _ = constant;
-        todo!()
+        // todo!()
     }
 
     fn super_pat(&mut self, ty: &Ty, pattern: &Pattern) {
@@ -607,20 +607,20 @@ pub trait MirVisitor {
     fn super_raw_ptr(&mut self, ty: &Ty, mutability: &Mutability) {
         let _ = ty;
         let _ = mutability;
-        todo!()
+        // todo!()
     }
 
     fn super_ref(&mut self, region: &Region, ty: &Ty, mutability: &Mutability) {
         let _ = region;
         let _ = ty;
         let _ = mutability;
-        todo!()
+        // todo!()
     }
 
     fn super_fn_def(&mut self, def: &FnDef, args: &GenericArgs) {
         let _ = def;
         let _ = args;
-        todo!()
+        // todo!()
     }
 
     fn super_fn_ptr(&mut self, sig: &PolyFnSig) {
@@ -651,7 +651,7 @@ pub trait MirVisitor {
 
     fn super_tuple(&mut self, tys: &Vec<Ty>) {
         let _ = tys;
-        todo!()
+        // todo!()
     }
 
     fn super_coroutine_witness(&mut self, def: &CoroutineWitnessDef, args: &GenericArgs){
