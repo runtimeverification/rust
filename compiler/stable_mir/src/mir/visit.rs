@@ -36,7 +36,7 @@
 //! variant argument) that does not require visiting.
 
 use crate::mir::*;
-use crate::ty::{Const, GenericArgs, Region, Ty};
+use crate::ty::*;
 use crate::{Error, Opaque, Span};
 
 pub trait MirVisitor {
@@ -105,7 +105,24 @@ pub trait MirVisitor {
 
     fn visit_ty(&mut self, ty: &Ty, location: Location) {
         let _ = location;
-        self.super_ty(ty)
+        self.super_ty(ty);
+        self.visit_ty_kind(&ty.kind(), location)
+    }
+
+    fn visit_ty_kind(&mut self, kind: &TyKind, location: Location) { // Not sure if this is the correct location for the region
+        self.super_ty_kind(kind, location)
+    }
+
+    fn visit_binder<T>(&mut self, binder: &Binder<T>) {
+        self.super_binder(binder)
+    }
+
+    fn visit_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+        self.super_alias_ty(kind, ty, location)
+    }
+
+    fn visit_alias_projection(&mut self, ty: &AliasTy) {
+        self.super_alias_projection(ty)
     }
 
     fn visit_constant(&mut self, constant: &Constant, location: Location) {
@@ -375,6 +392,43 @@ pub trait MirVisitor {
         let _ = ty;
     }
 
+    fn super_ty_kind(&mut self, kind: &TyKind, location: Location) {
+        let _ = kind;
+        match kind {
+            TyKind::RigidTy(rigid_ty) => self.visit_rigid_ty(rigid_ty, location),
+            TyKind::Alias(kind, ty) => self.visit_alias_ty(kind, ty, location), // Best focus 
+            TyKind::Param(_) => {},
+            TyKind::Bound(_, _) => {},
+        }
+    }
+
+    fn super_binder<T>(&mut self, binder: &Binder<T>) {
+        // TODO: binder.value: T
+
+        for bound_var in &binder.bound_vars {
+            match bound_var {
+                crate::ty::BoundVariableKind::Ty(_ty_kind) => {},
+                crate::ty::BoundVariableKind::Region(_region_kind) => {},
+                crate::ty::BoundVariableKind::Const => {},
+            }
+        } 
+    }
+
+    fn super_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+        let _ = location;
+
+        match kind {
+            AliasKind::Projection => self.visit_alias_projection(ty),
+            AliasKind::Inherent => {},
+            AliasKind::Opaque => {},
+            AliasKind::Weak => {},
+        }
+    }
+
+    fn super_alias_projection(&mut self, ty: &AliasTy) {
+        let _ = ty;
+    }
+
     fn super_constant(&mut self, constant: &Constant, location: Location) {
         let Constant { span, user_ty: _, literal } = constant;
         self.visit_span(span);
@@ -434,6 +488,199 @@ pub trait MirVisitor {
                 self.visit_operand(found, location);
             }
         }
+    }
+
+    // RigidTy
+    fn visit_rigid_ty(&mut self, rigid_ty: &RigidTy, location: Location) {
+        self.super_rigid_ty(rigid_ty, location)
+    }
+
+    fn super_rigid_ty(&mut self, rigid_ty: &RigidTy, location: Location) {
+        let _ = rigid_ty;
+        match rigid_ty {
+            RigidTy::Bool => self.visit_bool(rigid_ty),
+            RigidTy::Char => self.visit_char(rigid_ty),
+            RigidTy::Int(int) => self.visit_int(int),
+            RigidTy::Uint(uint) => self.visit_uint(uint),
+            RigidTy::Float(float) => self.visit_float(float),
+            RigidTy::Adt(def, args) => self.visit_adt(def, args), // Tricky (remember recursive case)
+            RigidTy::Foreign(def) => self.visit_foreign(def),
+            RigidTy::Str => self.visit_str(rigid_ty),
+            RigidTy::Array(ty, constant) => self.visit_array(ty, constant),
+            RigidTy::Pat(ty, pattern) => self.visit_pat(ty, pattern),
+            RigidTy::Slice(ty) => self.visit_slice(ty),
+            RigidTy::RawPtr(ty, mutability) => self.visit_raw_ptr(ty, mutability),
+            RigidTy::Ref(region, ty, mutability) => self.visit_ref(region, ty, mutability),
+            RigidTy::FnDef(def, args) => self.visit_fn_def(def, args),
+            RigidTy::FnPtr(sig) => self.visit_fn_ptr(sig),
+            RigidTy::Closure(def, args) => self.visit_closure(def, args),
+            RigidTy::Coroutine(def, args, movability) => self.visit_coroutine(def, args, movability),
+            RigidTy::Dynamic(binders, region, kind) => self.visit_dynamic(binders, region, kind, location),
+            RigidTy::Never => self.visit_never(),
+            RigidTy::Tuple(tys) => self.visit_tuple(tys),
+            RigidTy::CoroutineWitness(def, args) => self.visit_coroutine_witness(def, args),
+        }
+    }
+
+    fn visit_bool(&mut self, bool: &RigidTy) { // TODO: RigidTy::Bool
+        let _ = bool;
+    }
+
+    fn visit_char(&mut self, char: &RigidTy) { // TODO: RigidTy::Char
+        let _ = char;
+    }
+
+    fn visit_int(&mut self, int: &IntTy) {
+        let _ = int;
+    }
+
+    fn visit_uint(&mut self, uint: &UintTy) {
+        let _ = uint;
+    }
+
+    fn visit_float(&mut self, float: &FloatTy) {
+        let _ = float;
+    }
+
+    fn visit_adt(&mut self, def: &AdtDef, args: &GenericArgs) {
+        self.super_adt(def, args)
+    }
+
+    fn visit_foreign(&mut self, def: &ForeignDef) {
+        let _ = def;
+    }
+
+    fn visit_str(&mut self, str: &RigidTy) {
+        let _ = str;
+    }
+
+    fn visit_array(&mut self, ty: &Ty, constant: &Const) {
+        self.super_array(ty, constant);
+    }
+
+    fn visit_pat(&mut self, ty: &Ty, pattern: &Pattern) {
+        self.super_pat(ty, pattern)
+    }
+
+    fn visit_slice(&mut self, ty: &Ty) {
+        self.super_slice(ty)
+    }
+
+    fn visit_raw_ptr(&mut self, ty: &Ty, mutability: &Mutability) {
+        self.super_raw_ptr(ty, mutability)
+    }
+
+    fn visit_ref(&mut self, region: &Region, ty: &Ty, mutability: &Mutability) {
+        self.super_ref(region, ty, mutability)
+    }
+
+    fn visit_fn_def(&mut self, def: &FnDef, args: &GenericArgs) {
+        self.super_fn_def(def, args)
+    }
+
+    fn visit_fn_ptr(&mut self, sig: &PolyFnSig) {
+        self.super_fn_ptr(sig)
+    }
+
+    fn visit_closure(&mut self, def: &ClosureDef, args: &GenericArgs) {
+        self.super_closure(def, args)
+    }
+
+    fn visit_coroutine(&mut self, def: &CoroutineDef, args: &GenericArgs, movability: &Movability) {
+        self.super_coroutine(def, args, movability)
+    }
+
+    fn visit_dynamic(&mut self, binders: &Vec<Binder<ExistentialPredicate>>, region: &Region, kind: &DynKind, location: Location) {
+        self.super_dynamic(binders, region, kind, location)
+    }
+
+    fn visit_never(&mut self) { }
+
+    fn visit_tuple(&mut self, tys: &Vec<Ty>) {
+        self.super_tuple(tys)
+    }
+
+    fn visit_coroutine_witness(&mut self, def: &CoroutineWitnessDef, args: &GenericArgs) {
+        self.super_coroutine_witness(def, args)
+    }
+
+    fn super_adt(&mut self, def: &AdtDef, args: &GenericArgs) {
+        let _ = def;
+        let _ = args;
+        todo!()
+    }
+
+    fn super_array(&mut self, ty: &Ty, constant: &Const) {
+        let _ = ty;
+        let _ = constant;
+        todo!()
+    }
+
+    fn super_pat(&mut self, ty: &Ty, pattern: &Pattern) {
+        let _ = ty;
+        let _ = pattern;
+        todo!()
+    }
+
+    fn super_slice(&mut self, ty: &Ty) {
+        let _ = ty;
+        todo!()
+    }
+
+    fn super_raw_ptr(&mut self, ty: &Ty, mutability: &Mutability) {
+        let _ = ty;
+        let _ = mutability;
+        todo!()
+    }
+
+    fn super_ref(&mut self, region: &Region, ty: &Ty, mutability: &Mutability) {
+        let _ = region;
+        let _ = ty;
+        let _ = mutability;
+        todo!()
+    }
+
+    fn super_fn_def(&mut self, def: &FnDef, args: &GenericArgs) {
+        let _ = def;
+        let _ = args;
+        todo!()
+    }
+
+    fn super_fn_ptr(&mut self, sig: &PolyFnSig) {
+        let _ = sig;
+        todo!()
+    }
+
+    fn super_closure(&mut self, def: &ClosureDef, args: &GenericArgs) {
+        let _ = def;
+        let _ = args;
+        todo!()
+    }
+
+    fn super_coroutine(&mut self, def: &CoroutineDef, args: &GenericArgs, movability: &Movability) {
+        let _ = def;
+        let _ = args;
+        let _ = movability;
+        todo!()
+    }
+
+    fn super_dynamic(&mut self, binders: &Vec<Binder<ExistentialPredicate>>, region: &Region, kind: &DynKind, location: Location) {
+        let _ = kind; // kind:&DynKind
+        for binder in binders {
+            self.visit_binder(binder);
+        }
+        self.visit_region(region, location);
+    }
+
+    fn super_tuple(&mut self, tys: &Vec<Ty>) {
+        let _ = tys;
+        todo!()
+    }
+
+    fn super_coroutine_witness(&mut self, def: &CoroutineWitnessDef, args: &GenericArgs){
+        let _ = def;
+        let _ = args;
+        todo!()
     }
 }
 
