@@ -578,45 +578,49 @@ pub enum RigidTy {
 }
 }
 
-fn get_adtdef(ty: TyKind) -> (AdtDef, GenericArgs)  {
-    if let TyKind::RigidTy(RigidTy::Adt(def, args)) = ty {
-        return (def, args);
-    }
-    panic!("This should not be called on non-adt types");
-}
+// fn get_adtdef(ty: TyKind) -> (AdtDef, GenericArgs)  {
+//     if let TyKind::RigidTy(RigidTy::Adt(def, args)) = ty {
+//         return (def, args);
+//     }
+//     panic!("This should not be called on non-adt types");
+// }
 
-fn vec_to_set<T>(v: Vec<T>) -> rustc_data_structures::fx::FxHashSet<T> where T: Eq, T: std::hash::Hash {
-    rustc_data_structures::fx::FxHashSet::<T>::from_iter(v.into_iter())
-}
+// fn vec_to_set<T>(v: Vec<T>) -> rustc_data_structures::fx::FxHashSet<T> where T: Eq, T: std::hash::Hash {
+//     rustc_data_structures::fx::FxHashSet::<T>::from_iter(v.into_iter())
+// }
 
-macro_rules! visualize_diff {
-    ($a:expr, $an:expr, $b:expr, $bn:expr) => {
-        if $a != $b {
-            debug!("Only {}: {:?}, Only {}: {:?}", $an, $a.difference($b).collect::<Vec<_>>(), $bn, $b.difference($a).collect::<Vec<_>>());
-        }
-    }
-}
+// macro_rules! visualize_diff {
+//     ($a:expr, $an:expr, $b:expr, $bn:expr) => {
+//         if $a != $b {
+//             debug!("Only {}: {:?}, Only {}: {:?}", $an, $a.difference($b).collect::<Vec<_>>(), $bn, $b.difference($a).collect::<Vec<_>>());
+//         }
+//     }
+// }
  
+// TODO: figure out behavior of def.ty() and def.ty_with_args()
+//
+// let has_proj = args.0.clone().into_iter().any(|x| if let GenericArgKind::Type(y) = x { matches!(y.kind(), TyKind::Alias(AliasKind::Projection, _)) } else { false } );
+// AdtDef: std::Option<T>, adtdef.ty()                              => std::Option<T>
+// adtdef.ty_with_args(vec![GenericArgKind::Type(RigidTy(uint32))]) => std::Option<uint32>                         #[allow(rustc::potential_query_instability)]
+// adtdef.ty_with_args(vec![GenericArgKind::Type(Alias(projection, FnOnce::Output))]) => std::Option<???> // crash!#[instrument(level = "debug", skip(ser))]
+//
+// let ty = def.ty(); 
+// let ty2 = def.ty_with_args(args);
+// if ty != ty2 || ty.kind() != ty2.kind() {
+//     let (d1, a1) = get_adtdef(ty.kind());
+//     let (d2, a2) = get_adtdef(ty2.kind());
+//     if &d1 != def || &d2 != def { panic!("def.ty() or def.ty_with_args() did not return RigidTy::Adt") }
+//     let (s,s1,s2) = (vec_to_set(args.0.clone()), vec_to_set(a1.0), vec_to_set(a2.0));
+//     visualize_diff!(&s, "src", &s1, "def.ty()");
+//     visualize_diff!(&s, "src", &s2, "def.ty_with_args()");
+// }
 #[allow(rustc::potential_query_instability)]
 #[instrument(level = "debug", skip(ser))]
 fn serialize_adtdef<S>(def: &AdtDef, args: &GenericArgs, ser: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let mut cs = ser.serialize_tuple_variant("RigidTy", 5, "AdtDef", 3)?;
-    // let has_proj = args.0.clone().into_iter().any(|x| if let GenericArgKind::Type(y) = x { matches!(y.kind(), TyKind::Alias(AliasKind::Projection, _)) } else { false } );
-    let ty = def.ty(); 
-    let ty2 = def.ty_with_args(args); // AdtDef: std::Option<T>, adtdef.ty()                              => std::Option<T>
-                                          // adtdef.ty_with_args(vec![GenericArgKind::Type(RigidTy(uint32))]) => std::Option<uint32> 
-                                          // adtdef.ty_with_args(vec![GenericArgKind::Type(Alias(projection, FnOnce::Output))]) => std::Option<???> // crash!
-    if ty != ty2 || ty.kind() != ty2.kind() {
-        let (d1, a1) = get_adtdef(ty.kind());
-        let (d2, a2) = get_adtdef(ty2.kind());
-        if &d1 != def || &d2 != def { panic!("def.ty() or def.ty_with_args() did not return RigidTy::Adt") }
-        let (s,s1,s2) = (vec_to_set(args.0.clone()), vec_to_set(a1.0), vec_to_set(a2.0));
-        visualize_diff!(&s, "src", &s1, "def.ty()");
-        visualize_diff!(&s, "src", &s2, "def.ty_with_args()");
-    }
+    let mut cs = ser.serialize_tuple_variant("RigidTy", 5, "AdtDef", 2)?;
     cs.serialize_field(&def.def_id())?;
     cs.serialize_field(&args)?;
     cs.end()
