@@ -627,11 +627,25 @@ impl Rvalue {
     }
 }
 
+// This struct is half of an Aggregrate expresion --- it defines what aggregate is being built
+// the other half of an aggegrate expression is the arguments to the aggregate; these arguments are different for each aggregate type:
+// 1. arrays - arguments are each array element
+// 2. tuple - arguments are each tuple field
+// 3. adt - arguments are each struct/enum-variant field or the single union field
+// 4. closure - arguments are whatever is captured by the closure???
+// 5. coroutine - arguments are whatever is captured by the corouotine???
+// 6. rawptr - creates a (possibly) fat pointer --- arguments are existing (thin) pointer plus pointer metadata (which may be unit --- in which case, this is just a thin pointer)
+//    NOTE: this aggregate seems equivalent to calling core::ptr::from_raw_parts()
 derive_serialize! {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AggregateKind {
     Array(Ty),
     Tuple,
+    // 1. pointer to adt interned type layout
+    // 2. variant number (only useful for enum-likes incl. possibly coroutine state machines)
+    // 3. adt generic arguments --- with (1), determintes concrete type
+    // 4. unused
+    // 5. (only for unions) this field determines how the union type is interpreted
     Adt(AdtDef, VariantIdx, GenericArgs, Option<UserTypeAnnotationIndex>, Option<FieldIdx>),
     #[serde(serialize_with = "crate::ty::serialize_closuredef")]
     Closure(ClosureDef, GenericArgs),
