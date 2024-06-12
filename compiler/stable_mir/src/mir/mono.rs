@@ -3,7 +3,7 @@ use crate::crate_def::CrateDef;
 use crate::mir::Body;
 use crate::ty::{Allocation, ClosureDef, ClosureKind, FnDef, GenericArgs, IndexedVal, Ty};
 use crate::{with, CrateItem, DefId, Error, ItemKind, Opaque, Symbol};
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{ser::{SerializeStruct, SerializeTupleStruct}, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 use std::io;
 
@@ -32,8 +32,9 @@ impl Serialize for Instance {
         S: Serializer,
     {
         // TODO: check if we need to call instance APIs to retrieve missing info
-        let mut cs = serializer.serialize_struct("Instance", 1)?;
+        let mut cs = serializer.serialize_struct("Instance", 2)?;
         cs.serialize_field("kind", &self.kind)?;
+        cs.serialize_field("def", &self.def)?;
         cs.end()
     }
 }
@@ -256,9 +257,21 @@ impl From<StaticDef> for CrateItem {
     }
 }
 
-derive_serialize! {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct InstanceDef(usize);
+
+impl Serialize for InstanceDef {
+    #[instrument(level = "debug", skip(serializer))]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut cs = serializer.serialize_tuple_struct("InstanceDef", 3)?;
+        cs.serialize_field(&self.def_id())?;
+        cs.serialize_field(&self.krate().name)?;
+        cs.serialize_field(&self.name())?;
+        cs.end()
+    }
 }
 
 impl CrateDef for InstanceDef {
@@ -269,8 +282,23 @@ impl CrateDef for InstanceDef {
 
 crate_def! {
     /// Holds information about a static variable definition.
-    #[derive(Serialize)]
     pub StaticDef;
+}
+
+impl Serialize for StaticDef {
+    #[instrument(level = "debug", skip(serializer))]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut cs = serializer.serialize_tuple_struct("StaticDef", 5)?;
+        cs.serialize_field(&self.def_id())?;
+        cs.serialize_field(&self.krate().name)?;
+        cs.serialize_field(&self.name())?;
+        cs.serialize_field(&self.ty())?;
+        cs.serialize_field(&self.eval_initializer().ok())?;
+        cs.end()
+    }
 }
 
 impl TryFrom<CrateItem> for StaticDef {

@@ -620,8 +620,10 @@ fn serialize_adtdef<S>(def: &AdtDef, args: &GenericArgs, ser: S) -> Result<S::Ok
 where
     S: Serializer,
 {
-    let mut cs = ser.serialize_tuple_variant("RigidTy", 5, "AdtDef", 2)?;
+    let mut cs = ser.serialize_tuple_variant("RigidTy", 5, "AdtDef", 4)?;
     cs.serialize_field(&def.def_id())?;
+    cs.serialize_field(&def.krate().name)?;
+    cs.serialize_field(&def.name())?;
     cs.serialize_field(&args)?;
     cs.end()
 }
@@ -631,8 +633,10 @@ fn serialize_fndef<S>(def: &FnDef, args: &GenericArgs, ser: S) -> Result<S::Ok, 
 where
     S: Serializer,
 {
-    let mut cs = ser.serialize_tuple_variant("RigidTy", 13, "FnDef", 3)?;
+    let mut cs = ser.serialize_tuple_variant("RigidTy", 13, "FnDef", 5)?;
     cs.serialize_field(&def.def_id())?;
+    cs.serialize_field(&def.krate().name)?;
+    cs.serialize_field(&def.name())?;
     cs.serialize_field(&args)?;
     let sig = TyKind::RigidTy(RigidTy::FnDef(*def, args.clone()))
         .fn_sig()
@@ -795,7 +799,12 @@ impl Serialize for ForeignDef {
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("ForeignDef", &self.kind())
+        let mut cs = serializer.serialize_tuple_struct("ForeignDef", 4)?;
+        cs.serialize_field(&self.def_id())?;
+        cs.serialize_field(&self.krate().name)?;
+        cs.serialize_field(&self.name())?;
+        cs.serialize_field(&self.kind())?;
+        cs.end()
     }
 }
 
@@ -825,7 +834,12 @@ impl Serialize for FnDef {
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("FnDef", &with(|cx| cx.def_ty(self.def_id())))
+        let mut cs = serializer.serialize_tuple_struct("FnDef", 3)?;
+        cs.serialize_field(&self.def_id())?;
+        cs.serialize_field(&self.krate().name)?;
+        cs.serialize_field(&self.name())?;
+        cs.end()
+        // cs.serialize_field(&with(|cx| cx.def_ty(self.def_id())))
         // TODO: the following would be more interesting, but not sure where to recover the generic args
         // serializer.serialize_newtype_struct("FnDef", with(|cx| cx.fn_sig(*self, /* missing GenericArgs type */)))
     }
@@ -858,8 +872,21 @@ crate_def! {
 }
 
 crate_def! {
-    #[derive(Serialize)]
     pub AdtDef;
+}
+
+impl Serialize for AdtDef {
+    #[instrument(level = "debug", skip(serializer))]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut cs = serializer.serialize_tuple_struct("AdtDef", 3)?;
+        cs.serialize_field(&self.def_id())?;
+        cs.serialize_field(&self.krate().name)?;
+        cs.serialize_field(&self.name())?;
+        cs.end()
+    }
 }
 
 derive_serialize! {
