@@ -390,7 +390,7 @@ pub trait MirVisitor {
         let _ = kind;
         match kind {
             TyKind::RigidTy(rigid_ty) => self.visit_rigid_ty(rigid_ty, location),
-            TyKind::Alias(kind, ty) => self.visit_alias_ty(kind, ty, location), // Best focus 
+            TyKind::Alias(kind, ty) => self.visit_alias(kind, ty, location), // Best focus 
             TyKind::Param(param_ty) => self.visit_param_ty(param_ty),
             TyKind::Bound(debruijn, bound_ty) => self.visit_bound_ty(debruijn, bound_ty),
         }
@@ -676,54 +676,62 @@ pub trait MirVisitor {
     }
 
     // Alias
-    fn visit_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
-        self.super_alias_ty(kind, ty, location)
+    fn visit_alias(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+        self.super_alias(kind, ty, location)
     }
 
-    fn visit_alias_projection(&mut self, ty: &AliasTy) {
-        self.super_alias_projection(ty)
+    fn visit_alias_projection(&mut self, ty: &AliasTy, location: Location) {
+        self.super_alias_projection(ty, location)
     }
 
-    fn visit_alias_inherent(&mut self, ty: &AliasTy) {
-        self.super_alias_inherent(ty)
+    fn visit_alias_inherent(&mut self, ty: &AliasTy, location: Location) {
+        self.super_alias_inherent(ty, location)
     }
 
-    fn visit_alias_opaque(&mut self, ty: &AliasTy) {
-        self.super_alias_opaque(ty)
+    fn visit_alias_opaque(&mut self, ty: &AliasTy, location: Location) {
+        self.super_alias_opaque(ty, location)
     }
 
-    fn visit_alias_weak(&mut self, ty: &AliasTy) {
-        self.super_alias_weak(ty)
+    fn visit_alias_weak(&mut self, ty: &AliasTy, location: Location) {
+        self.super_alias_weak(ty, location)
     }
 
-    fn super_alias_ty(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
+    fn visit_alias_ty(&mut self, ty: &AliasTy, location: Location) {
+        self.super_alias_ty(ty, location)
+    }
+
+    fn super_alias(&mut self, kind: &AliasKind, ty: &AliasTy, location: Location) {
         let _ = location;
 
         match kind {
-            AliasKind::Projection => self.visit_alias_projection(ty),
-            AliasKind::Inherent => self.visit_alias_inherent(ty),
-            AliasKind::Opaque => self.visit_alias_opaque(ty),
-            AliasKind::Weak => self.visit_alias_weak(ty),
+            AliasKind::Projection => self.visit_alias_projection(ty, location),
+            AliasKind::Inherent => self.visit_alias_inherent(ty, location),
+            AliasKind::Opaque => self.visit_alias_opaque(ty, location),
+            AliasKind::Weak => self.visit_alias_weak(ty, location),
         }
     }
 
-    fn super_alias_projection(&mut self, ty: &AliasTy) {
-        let _ = ty;
-        todo!()
+    fn super_alias_projection(&mut self, ty: &AliasTy, location: Location) {
+        self.visit_alias_ty(ty, location)
     }
 
-    fn super_alias_inherent(&mut self, ty: &AliasTy) {
-        let _ = ty;
-        todo!()
+    fn super_alias_inherent(&mut self, ty: &AliasTy, location: Location) {
+        self.visit_alias_ty(ty, location)
     }
-    fn super_alias_opaque(&mut self, ty: &AliasTy) {
-        let _ = ty;
-        todo!()
+    fn super_alias_opaque(&mut self, ty: &AliasTy, location: Location) {
+        self.visit_alias_ty(ty, location)
     }
 
-    fn super_alias_weak(&mut self, ty: &AliasTy) {
-        let _ = ty;
-        todo!()
+    fn super_alias_weak(&mut self, ty: &AliasTy, location: Location) {
+        self.visit_alias_ty(ty, location)
+    }
+
+    fn super_alias_ty(&mut self, ty: &AliasTy, location: Location) {
+        let AliasTy { def_id, args } = ty;
+        let _ = def_id;
+        for kind in &args.0 {
+            self.super_generic_arg_kind(kind, location)
+        }
     }
 
     // Param
