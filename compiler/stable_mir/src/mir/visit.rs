@@ -389,7 +389,7 @@ pub trait MirVisitor {
         match kind {
             TyKind::RigidTy(rigid_ty) => self.visit_rigid_ty(rigid_ty, location),
             TyKind::Alias(kind, ty) => self.visit_alias_ty(kind, ty, location), // Best focus 
-            TyKind::Param(_) => {},
+            TyKind::Param(param_ty) => self.visit_param_ty(param_ty),
             TyKind::Bound(_, _) => {},
         }
     }
@@ -709,6 +709,17 @@ pub trait MirVisitor {
     fn super_alias_weak(&mut self, ty: &AliasTy) {
         let _ = ty;
         todo!()
+    }
+
+    // Param
+    fn visit_param_ty(&mut self, param_ty: &ParamTy) {
+        self.super_param_ty(param_ty)
+    }
+
+    fn super_param_ty(&mut self, param_ty: &ParamTy) {
+        let ParamTy {index, name} = param_ty;
+        let _ = index;
+        let _ = name;
     }
 }
 
