@@ -390,7 +390,7 @@ pub trait MirVisitor {
             TyKind::RigidTy(rigid_ty) => self.visit_rigid_ty(rigid_ty, location),
             TyKind::Alias(kind, ty) => self.visit_alias_ty(kind, ty, location), // Best focus 
             TyKind::Param(param_ty) => self.visit_param_ty(param_ty),
-            TyKind::Bound(_, _) => {},
+            TyKind::Bound(debruijn, bound_ty) => self.visit_bound_ty(debruijn, bound_ty),
         }
     }
 
@@ -720,6 +720,40 @@ pub trait MirVisitor {
         let ParamTy {index, name} = param_ty;
         let _ = index;
         let _ = name;
+    }
+
+    // Bound
+    fn visit_bound_ty(&mut self, debruijn: &usize, bound_ty: &BoundTy) {
+        self.super_bound_ty(debruijn, bound_ty)
+    }
+
+    fn visit_bound_ty_kind(&mut self, kind: &BoundTyKind) {
+        self.super_bound_ty_kind(kind)
+    }
+
+    fn visit_bound_ty_anon(&mut self) {}
+
+    fn visit_bound_ty_param(&mut self, def: &ParamDef, symbol: &String) {
+        self.super_bound_ty_param(def, symbol)
+    }
+
+    fn super_bound_ty(&mut self, debruijn: &usize, bound_ty: &BoundTy) {
+        let _ = debruijn;
+        let BoundTy {var, kind} = bound_ty;
+        let _ = var;
+        self.visit_bound_ty_kind(kind)
+    }
+
+    fn super_bound_ty_kind(&mut self, kind: &BoundTyKind) {
+        match kind {
+            BoundTyKind::Anon => self.visit_bound_ty_anon(),
+            BoundTyKind::Param(def, symbol) => self.visit_bound_ty_param(def, symbol),
+        }
+    }
+
+    fn super_bound_ty_param(&mut self, def: &ParamDef, symbol: &String) {
+        let _ = def;
+        let _ = symbol;
     }
 }
 
