@@ -29,6 +29,7 @@ pub use crate::crate_def::DefId;
 pub use crate::error::*;
 use crate::mir::Body;
 use crate::mir::Mutability;
+use crate::mir::alloc::AllocId;
 use crate::ty::{ForeignModuleDef, ImplDef, IndexedVal, Span, TraitDef, Ty};
 use scoped_tls::scoped_thread_local;
 use serde::{Serialize, Serializer};
@@ -280,6 +281,8 @@ pub fn opaque<T: Debug>(value: &T) -> Opaque {
 #[derive(Default)]
 struct SerializeCycleCheck {
     types: rustc_data_structures::fx::FxHashSet<Ty>,
+    seen_allocs: rustc_data_structures::fx::FxHashSet<AllocId>,
+    allocs_ordered: Vec<AllocId>,
 }
 
 // A thread local variable that stores a pointer to the seen sets for recursive, interned values
@@ -306,3 +309,39 @@ where
     let ptr = &scc as *const _ as *const ();
     TLV.set(&Cell::new(ptr), || serde_json::to_string(&value))
 }
+
+// pub struct SetList<T> 
+// {
+//     list: Vec<T>,
+//     set: rustc_data_structures::fx::FxHashSet<T>,
+// }
+
+// impl<T: Eq + std::hash::Hash + Clone> SetList<T> {
+
+//     /// Pushes non-duplicate `element` to the back of list and returns true.
+//     /// returns false if `element` is a duplicate
+//     #[inline]
+//     pub fn insert(&mut self, element: T) -> bool {
+//         if self.set.insert(element.clone()) {
+//             self.list.push(element.clone());
+//             true
+//         } else {
+//             false
+//         }
+//     }
+
+//     /// Finds the index for an element in the set, panics if not present
+//     #[inline]
+//     pub fn get_index(&self, element: T) -> usize {
+//         if self.set.contains(&element) {
+//             return self.list.clone().into_iter().position(|elem| elem == element).unwrap();
+//         }
+//         panic!();
+//     }
+
+//     /// Print all elements and their index
+//     #[inline]
+//     pub fn enumerate(&self) {
+//         self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0));
+//     }
+// }

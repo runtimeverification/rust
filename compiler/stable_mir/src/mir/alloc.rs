@@ -1,4 +1,5 @@
 //! This module provides methods to retrieve allocation information, such as static variables.
+use crate::cycle_check;
 use crate::mir::mono::{Instance, StaticDef};
 use crate::target::{Endian, MachineInfo};
 use crate::ty::{Allocation, Binder, ExistentialTraitRef, IndexedVal, Ty};
@@ -53,7 +54,21 @@ impl Serialize for AllocId {
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("AllocId", &GlobalAlloc::from(*self))
+        cycle_check(|scc| {
+            if !scc.seen_allocs.contains(self) {
+                scc.seen_allocs.insert(*self);
+                scc.allocs_ordered.push(*self);
+                serializer.serialize_newtype_struct("AllocId2", &(scc.seen_allocs.len() - 1))
+            } else {
+                let index = scc.allocs_ordered
+                    .clone()
+                    .into_iter()
+                    .position(|alloc_id| self == &alloc_id)
+                    .unwrap();
+                serializer.serialize_newtype_struct("AllocId2", &index)
+            }
+        })
+        // serializer.serialize_newtype_struct("AllocId", &self.0)
     }
 }
 
