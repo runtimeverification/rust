@@ -308,14 +308,18 @@ pub fn global_allocs() -> Vec<GlobalAlloc> {
         .collect()
 }
 
+pub fn scc_accessor(callback: impl FnOnce()) {
+    assert!(!TLV.is_set());
+    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
+    let ptr = &scc as *const _ as *const ();
+    TLV.set(&Cell::new(ptr), callback)
+}
+
 pub fn to_json<S>(value: S) -> Result<String, serde_json::Error>
 where
     S: Serialize,
 {
-    assert!(!TLV.is_set());
-    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
-    let ptr = &scc as *const _ as *const ();
-    TLV.set(&Cell::new(ptr), || serde_json::to_string(&value))
+    serde_json::to_string(&value)
 }
 
 // pub struct SetList<T> 
