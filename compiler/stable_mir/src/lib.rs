@@ -29,7 +29,7 @@ pub use crate::crate_def::DefId;
 pub use crate::error::*;
 use crate::mir::Body;
 use crate::mir::Mutability;
-use crate::mir::alloc::AllocId;
+use crate::mir::alloc::{AllocId, GlobalAlloc};
 use crate::ty::{ForeignModuleDef, ImplDef, IndexedVal, Span, TraitDef, Ty};
 use scoped_tls::scoped_thread_local;
 use serde::{Serialize, Serializer};
@@ -300,6 +300,14 @@ pub(crate) fn cycle_check<R>(f: impl for<'tcx> FnOnce(&mut SerializeCycleCheck) 
     })
 }
 
+pub fn global_allocs() -> Vec<GlobalAlloc> {
+    cycle_check(|scc| scc.allocs_ordered
+        .clone()
+        .into_iter()
+        .map(|alloc| GlobalAlloc::from(alloc)))
+        .collect()
+}
+
 pub fn to_json<S>(value: S) -> Result<String, serde_json::Error>
 where
     S: Serialize,
@@ -340,8 +348,8 @@ where
 //     }
 
 //     /// Print all elements and their index
-    // #[inline]
-    // pub fn enumerate(&self) {
-    //     self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0)); // pair (usize, GlobalAlloc)
-    // }
+//     #[inline]
+//     pub fn enumerate(&self) {
+//         self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0));
+//     }
 // }
