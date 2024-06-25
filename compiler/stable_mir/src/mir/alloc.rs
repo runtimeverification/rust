@@ -1,5 +1,5 @@
 //! This module provides methods to retrieve allocation information, such as static variables.
-use crate::cycle_check;
+use crate::{cycle_check, SerializeCycleCheck};
 use crate::mir::mono::{Instance, StaticDef};
 use crate::target::{Endian, MachineInfo};
 use crate::ty::{Allocation, Binder, ExistentialTraitRef, IndexedVal, Ty};
@@ -48,6 +48,29 @@ impl GlobalAlloc {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct AllocId(usize);
 
+fn recurse(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
+    if !scc.seen_allocs.contains(alloc_id) {
+        scc.seen_allocs.insert(*alloc_id);
+        scc.allocs_ordered.push(*alloc_id);
+        match GlobalAlloc::from(*alloc_id) {
+            GlobalAlloc::Memory(allocation) => {
+                allocation.provenance
+                    .ptrs
+                    .into_iter()
+                    .for_each(|(_, prov)| { recurse(scc, &prov.0); })
+            },
+            _ => {},
+        }
+        scc.seen_allocs.len() - 1
+    } else {
+        (&scc.allocs_ordered)
+            .into_iter()
+            .position(|alloc| alloc_id == alloc)
+            .unwrap()
+    }
+
+}
+
 impl Serialize for AllocId {
     #[instrument(level = "debug", skip(serializer))]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -55,23 +78,13 @@ impl Serialize for AllocId {
         S: Serializer,
     {
         cycle_check(|scc| {
-            if !scc.seen_allocs.contains(self) {
-                scc.seen_allocs.insert(*self);
-                scc.allocs_ordered.push(*self);
-                serializer.serialize_newtype_struct("AllocId2", &(scc.seen_allocs.len() - 1))
-            } else {
-                let index = scc.allocs_ordered
-                    .clone()
-                    .into_iter()
-                    .position(|alloc_id| self == &alloc_id)
-                    .unwrap();
-                serializer.serialize_newtype_struct("AllocId2", &index)
-            }
+            let temp = recurse(scc, self);
+            serializer.serialize_newtype_struct("AllocId2", &(self.0, temp))
         })
-        // serializer.serialize_newtype_struct("AllocId", &self.0)
     }
 }
 
+// STORAGE: 
 impl IndexedVal for AllocId {
     fn to_val(index: usize) -> Self {
         AllocId(index)

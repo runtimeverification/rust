@@ -282,7 +282,7 @@ pub fn opaque<T: Debug>(value: &T) -> Opaque {
 struct SerializeCycleCheck {
     types: rustc_data_structures::fx::FxHashSet<Ty>,
     seen_allocs: rustc_data_structures::fx::FxHashSet<AllocId>,
-    allocs_ordered: Vec<AllocId>,
+    allocs_ordered: Vec<AllocId>, // Change to GlobalAlloc (saves converting later)
 }
 
 // A thread local variable that stores a pointer to the seen sets for recursive, interned values
@@ -340,8 +340,8 @@ where
 //     }
 
 //     /// Print all elements and their index
-//     #[inline]
-//     pub fn enumerate(&self) {
-//         self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0));
-//     }
+    // #[inline]
+    // pub fn enumerate(&self) {
+    //     self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0)); // pair (usize, GlobalAlloc)
+    // }
 // }
