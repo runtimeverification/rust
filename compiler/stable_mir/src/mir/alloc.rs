@@ -1,4 +1,5 @@
 //! This module provides methods to retrieve allocation information, such as static variables.
+use crate::{cycle_check, SerializeCycleCheck};
 use crate::mir::mono::{Instance, StaticDef};
 use crate::target::{Endian, MachineInfo};
 use crate::ty::{Allocation, Binder, ExistentialTraitRef, IndexedVal, Ty};
@@ -47,13 +48,39 @@ impl GlobalAlloc {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct AllocId(usize);
 
+fn get_index_and_populate_allocs(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
+    let galloc = &GlobalAlloc::from(*alloc_id);
+    if !scc.seen_allocs.contains(alloc_id) {
+        scc.seen_allocs.insert(*alloc_id);
+        scc.gallocs_ordered.push(galloc.clone());
+        match galloc {
+            GlobalAlloc::Memory(allocation) => {
+                (&allocation.provenance.ptrs)
+                    .into_iter()
+                    .for_each(|(_, prov)| { get_index_and_populate_allocs(scc, &prov.0); })
+            },
+            _ => {},
+        }
+        scc.seen_allocs.len() - 1
+    } else {
+        (&scc.gallocs_ordered)
+            .into_iter()
+            .position(|needle| galloc == needle)
+            .unwrap()
+    }
+
+}
+
 impl Serialize for AllocId {
     #[instrument(level = "debug", skip(serializer))]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("AllocId", &GlobalAlloc::from(*self))
+        cycle_check(|scc| {
+            let index = get_index_and_populate_allocs(scc, self);
+            serializer.serialize_newtype_struct("AllocId", &(self.0, index))
+        })
     }
 }
 

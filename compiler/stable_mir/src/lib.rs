@@ -29,6 +29,7 @@ pub use crate::crate_def::DefId;
 pub use crate::error::*;
 use crate::mir::Body;
 use crate::mir::Mutability;
+use crate::mir::alloc::{AllocId, GlobalAlloc};
 use crate::ty::{ForeignModuleDef, ImplDef, IndexedVal, Span, TraitDef, Ty};
 use scoped_tls::scoped_thread_local;
 use serde::{Serialize, Serializer};
@@ -280,6 +281,8 @@ pub fn opaque<T: Debug>(value: &T) -> Opaque {
 #[derive(Default)]
 struct SerializeCycleCheck {
     types: rustc_data_structures::fx::FxHashSet<Ty>,
+    seen_allocs: rustc_data_structures::fx::FxHashSet<AllocId>,
+    gallocs_ordered: Vec<GlobalAlloc>,
 }
 
 // A thread local variable that stores a pointer to the seen sets for recursive, interned values
@@ -297,12 +300,20 @@ pub(crate) fn cycle_check<R>(f: impl for<'tcx> FnOnce(&mut SerializeCycleCheck) 
     })
 }
 
+pub fn scc_accessor(callback: impl FnOnce()) {
+    assert!(!TLV.is_set());
+    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
+    let ptr = &scc as *const _ as *const ();
+    TLV.set(&Cell::new(ptr), callback)
+}
+
+pub fn global_allocs() -> Vec<GlobalAlloc> {
+    cycle_check(|scc| scc.gallocs_ordered.clone())
+}
+
 pub fn to_json<S>(value: S) -> Result<String, serde_json::Error>
 where
     S: Serialize,
 {
-    assert!(!TLV.is_set());
-    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
-    let ptr = &scc as *const _ as *const ();
-    TLV.set(&Cell::new(ptr), || serde_json::to_string(&value))
+    serde_json::to_string(&value)
 }
