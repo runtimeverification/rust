@@ -49,13 +49,13 @@ impl GlobalAlloc {
 pub struct AllocId(usize);
 
 fn get_index_and_populate_allocs(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
+    let galloc = &GlobalAlloc::from(*alloc_id);
     if !scc.seen_allocs.contains(alloc_id) {
         scc.seen_allocs.insert(*alloc_id);
-        scc.allocs_ordered.push(*alloc_id);
-        match GlobalAlloc::from(*alloc_id) {
+        scc.gallocs_ordered.push(galloc.clone());
+        match galloc {
             GlobalAlloc::Memory(allocation) => {
-                allocation.provenance
-                    .ptrs
+                (&allocation.provenance.ptrs)
                     .into_iter()
                     .for_each(|(_, prov)| { get_index_and_populate_allocs(scc, &prov.0); })
             },
@@ -63,9 +63,9 @@ fn get_index_and_populate_allocs(scc: &mut SerializeCycleCheck, alloc_id: &Alloc
         }
         scc.seen_allocs.len() - 1
     } else {
-        (&scc.allocs_ordered)
+        (&scc.gallocs_ordered)
             .into_iter()
-            .position(|alloc| alloc_id == alloc)
+            .position(|needle| galloc == needle)
             .unwrap()
     }
 

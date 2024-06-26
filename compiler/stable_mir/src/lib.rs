@@ -282,7 +282,7 @@ pub fn opaque<T: Debug>(value: &T) -> Opaque {
 struct SerializeCycleCheck {
     types: rustc_data_structures::fx::FxHashSet<Ty>,
     seen_allocs: rustc_data_structures::fx::FxHashSet<AllocId>,
-    allocs_ordered: Vec<AllocId>, // Change to GlobalAlloc (saves converting later)
+    gallocs_ordered: Vec<GlobalAlloc>,
 }
 
 // A thread local variable that stores a pointer to the seen sets for recursive, interned values
@@ -308,11 +308,7 @@ pub fn scc_accessor(callback: impl FnOnce()) {
 }
 
 pub fn global_allocs() -> Vec<GlobalAlloc> {
-    cycle_check(|scc| scc.allocs_ordered
-        .clone()
-        .into_iter()
-        .map(|alloc| GlobalAlloc::from(alloc)))
-        .collect()
+    cycle_check(|scc| scc.gallocs_ordered.clone())
 }
 
 pub fn to_json<S>(value: S) -> Result<String, serde_json::Error>
