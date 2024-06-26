@@ -300,6 +300,13 @@ pub(crate) fn cycle_check<R>(f: impl for<'tcx> FnOnce(&mut SerializeCycleCheck) 
     })
 }
 
+pub fn scc_accessor(callback: impl FnOnce()) {
+    assert!(!TLV.is_set());
+    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
+    let ptr = &scc as *const _ as *const ();
+    TLV.set(&Cell::new(ptr), callback)
+}
+
 pub fn global_allocs() -> Vec<GlobalAlloc> {
     cycle_check(|scc| scc.allocs_ordered
         .clone()
@@ -308,52 +315,9 @@ pub fn global_allocs() -> Vec<GlobalAlloc> {
         .collect()
 }
 
-pub fn scc_accessor(callback: impl FnOnce()) {
-    assert!(!TLV.is_set());
-    let scc: RefCell<SerializeCycleCheck> = RefCell::new(std::default::Default::default());
-    let ptr = &scc as *const _ as *const ();
-    TLV.set(&Cell::new(ptr), callback)
-}
-
 pub fn to_json<S>(value: S) -> Result<String, serde_json::Error>
 where
     S: Serialize,
 {
     serde_json::to_string(&value)
 }
-
-// pub struct SetList<T> 
-// {
-//     list: Vec<T>,
-//     set: rustc_data_structures::fx::FxHashSet<T>,
-// }
-
-// impl<T: Eq + std::hash::Hash + Clone> SetList<T> {
-
-//     /// Pushes non-duplicate `element` to the back of list and returns true.
-//     /// returns false if `element` is a duplicate
-//     #[inline]
-//     pub fn insert(&mut self, element: T) -> bool {
-//         if self.set.insert(element.clone()) {
-//             self.list.push(element.clone());
-//             true
-//         } else {
-//             false
-//         }
-//     }
-
-//     /// Finds the index for an element in the set, panics if not present
-//     #[inline]
-//     pub fn get_index(&self, element: T) -> usize {
-//         if self.set.contains(&element) {
-//             return self.list.clone().into_iter().position(|elem| elem == element).unwrap();
-//         }
-//         panic!();
-//     }
-
-//     /// Print all elements and their index
-//     #[inline]
-//     pub fn enumerate(&self) {
-//         self.list.clone().into_iter().enumerate().for_each(|pair| println!("{}", pair.0));
-//     }
-// }

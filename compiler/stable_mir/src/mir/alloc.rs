@@ -48,7 +48,7 @@ impl GlobalAlloc {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct AllocId(usize);
 
-fn recurse(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
+fn get_index_and_populate_allocs(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
     if !scc.seen_allocs.contains(alloc_id) {
         scc.seen_allocs.insert(*alloc_id);
         scc.allocs_ordered.push(*alloc_id);
@@ -57,7 +57,7 @@ fn recurse(scc: &mut SerializeCycleCheck, alloc_id: &AllocId) -> usize {
                 allocation.provenance
                     .ptrs
                     .into_iter()
-                    .for_each(|(_, prov)| { recurse(scc, &prov.0); })
+                    .for_each(|(_, prov)| { get_index_and_populate_allocs(scc, &prov.0); })
             },
             _ => {},
         }
@@ -78,13 +78,12 @@ impl Serialize for AllocId {
         S: Serializer,
     {
         cycle_check(|scc| {
-            let temp = recurse(scc, self);
-            serializer.serialize_newtype_struct("AllocId2", &(self.0, temp))
+            let index = get_index_and_populate_allocs(scc, self);
+            serializer.serialize_newtype_struct("AllocId", &(self.0, index))
         })
     }
 }
 
-// STORAGE: 
 impl IndexedVal for AllocId {
     fn to_val(index: usize) -> Self {
         AllocId(index)
