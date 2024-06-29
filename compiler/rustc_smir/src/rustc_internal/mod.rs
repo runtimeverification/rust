@@ -5,7 +5,7 @@
 
 use crate::rustc_smir::{context::TablesWrapper, Stable, Tables};
 use rustc_data_structures::fx;
-use rustc_data_structures::fx::FxIndexMap;
+use rustc_data_structures::fx::{FxIndexMap, FxHashSet};
 use rustc_middle::mir::interpret::AllocId;
 use rustc_middle::ty;
 use rustc_middle::ty::TyCtxt;
@@ -217,6 +217,8 @@ where
         ty_consts: IndexMap::default(),
         mir_consts: IndexMap::default(),
         layouts: IndexMap::default(),
+        visited_tys: FxHashSet::default(),
+        visited_alloc_ids: FxHashSet::default(),
     }));
     stable_mir::compiler_interface::run(&tables, || init(&tables, f))
 }

@@ -8,12 +8,22 @@ use crate::mir::alloc::{read_target_int, read_target_uint, AllocId};
 use crate::mir::mono::StaticDef;
 use crate::target::MachineInfo;
 use crate::{Filename, Opaque};
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Range;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Ty(usize);
+
+impl Serialize for Ty {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        with(|cx| cx.add_visited_ty(*self));
+        serializer.serialize_newtype_struct("Ty", &self.0)
+    }
+}
 
 impl Debug for Ty {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
