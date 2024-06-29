@@ -6,6 +6,7 @@
 #![allow(rustc::usage_of_qualified_ty)]
 
 use rustc_abi::HasDataLayout;
+use rustc_data_structures::fx;
 use rustc_hir::LangItem;
 use rustc_middle::ty::layout::{
     FnAbiOf, FnAbiOfHelpers, HasParamEnv, HasTyCtxt, LayoutOf, LayoutOfHelpers,
@@ -780,6 +781,22 @@ impl<'tcx> Context for TablesWrapper<'tcx> {
         let arg_internal = arg.internal(&mut *tables, tcx);
         let ty = un_op.internal(&mut *tables, tcx).ty(tcx, arg_internal);
         ty.stable(&mut *tables)
+    }
+
+    fn add_visited_ty(&self, val: Ty) {
+        self.0.borrow_mut().visited_tys.insert(val);
+    }
+
+    fn add_visited_alloc_id(&self, val: stable_mir::mir::alloc::AllocId) {
+        self.0.borrow_mut().visited_alloc_ids.insert(val);
+    }
+
+    fn visited_tys(&self) -> fx::FxHashSet<Ty> {
+        self.0.borrow_mut().visited_tys.clone()
+    }
+
+    fn visited_alloc_ids(&self) -> fx::FxHashSet<stable_mir::mir::alloc::AllocId> {
+        self.0.borrow_mut().visited_alloc_ids.clone()
     }
 }
 

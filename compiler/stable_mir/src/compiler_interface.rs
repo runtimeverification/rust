@@ -3,6 +3,7 @@
 //! StableMIR users should not use any of the items in this module directly.
 //! These APIs have no stability guarantee.
 
+use rustc_data_structures::fx;
 use std::cell::Cell;
 
 use crate::abi::{FnAbi, Layout, LayoutShape};
@@ -242,6 +243,16 @@ pub trait Context {
 
     /// Get the resulting type of unary operation.
     fn unop_ty(&self, un_op: UnOp, arg: Ty) -> Ty;
+
+    fn add_visited_ty(&self, val: Ty);
+
+    fn add_visited_alloc_id(&self, val: AllocId);
+
+    /// Get underlying `TyKind`s for all `Ty`s visited during serialization
+    fn visited_tys(&self) -> fx::FxHashSet<Ty>;
+
+    /// Get underlying `GlobalAlloc`s for all `AllocId`s visited during serialization
+    fn visited_alloc_ids(&self) -> fx::FxHashSet<AllocId>;
 }
 
 // A thread local variable that stores a pointer to the tables mapping between TyCtxt
