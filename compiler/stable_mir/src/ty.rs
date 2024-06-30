@@ -27,13 +27,43 @@ impl Serialize for Ty {
 }
 
 fn add_visited_tys(cx: &dyn Context, val: Ty) {
-    use self::{RigidTy::*, TyKind::RigidTy};
+    use self::{GenericArgKind::*, RigidTy::*, TyConstKind::*, TyKind::RigidTy};
+    let add_vec_tys = |tys: Vec<Ty>| {
+        tys.into_iter().for_each(|ty| add_visited_tys(cx, ty));
+    };
+    let add_arg_tys = |args: GenericArgs| {
+        for arg in args.0 {
+            match arg {
+                Type(ty) | Const(TyConst { kind: Value(ty, _) | ZSTValue(ty), id: _ }) => { add_visited_tys(cx, ty); },
+                _ => {}
+            }
+        }
+    };
     if cx.add_visited_ty(val) {
         match val.kind() {
             RigidTy(Array(ty, _) | Pat(ty, _) | Slice(ty) | RawPtr(ty, _) | Ref(_, ty, _)) => {
                 add_visited_tys(cx, ty)
             }
-            RigidTy(Tuple(tys)) => tys.into_iter().for_each(|ty| add_visited_tys(cx, ty)),
+            RigidTy(Tuple(tys)) => add_vec_tys(tys),
+            RigidTy(Adt(def, args)) => {
+                for variant in def.variants_iter() {
+                    for field in variant.fields() {
+                        add_visited_tys(cx, field.ty());
+                    }
+                }
+                add_arg_tys(args.clone());
+            }
+            // FIXME: Would be good to grab the coroutine signature
+            RigidTy(Coroutine(_, args, _) | CoroutineWitness(_, args)) => add_arg_tys(args),
+            ref kind @ RigidTy(FnDef(_, ref args) | Closure(_, ref args)) => {
+                add_vec_tys(kind.fn_sig().unwrap().value.inputs_and_output);
+                add_arg_tys(args.clone());
+            }
+            RigidTy(Foreign(def)) => match def.kind() {
+                ForeignItemKind::Fn(def) => add_vec_tys(def.fn_sig().value.inputs_and_output),
+                ForeignItemKind::Type(ty) => add_visited_tys(cx, ty),
+                ForeignItemKind::Static(def) => add_visited_tys(cx, def.ty()),
+            }
             _ => {}
         }
     }
