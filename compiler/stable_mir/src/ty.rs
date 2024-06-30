@@ -27,11 +27,13 @@ impl Serialize for Ty {
 }
 
 fn add_visited_tys(cx: &dyn Context, val: Ty) {
-    use RigidTy::*;
+    use self::{RigidTy::*, TyKind::RigidTy};
     if cx.add_visited_ty(val) {
         match val.kind() {
-            TyKind::RigidTy(Array(ty, _) | Pat(ty, _) | Slice(ty) | RawPtr(ty, _) | Ref(_, ty, _)) => add_visited_tys(cx, ty),
-            TyKind::RigidTy(Tuple(tys)) => tys.into_iter().for_each(|ty| add_visited_tys(cx, ty)),
+            RigidTy(Array(ty, _) | Pat(ty, _) | Slice(ty) | RawPtr(ty, _) | Ref(_, ty, _)) => {
+                add_visited_tys(cx, ty)
+            }
+            RigidTy(Tuple(tys)) => tys.into_iter().for_each(|ty| add_visited_tys(cx, ty)),
             _ => {}
         }
     }

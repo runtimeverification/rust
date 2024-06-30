@@ -189,12 +189,12 @@ pub fn all_trait_impls() -> ImplTraitDecls {
     with(|cx| cx.all_trait_impls())
 }
 
-
 #[allow(rustc::potential_query_instability)] // result is sorted and thus deterministic
 pub fn visited_tys() -> Vec<(Ty, ty::TyKind)> {
     with(|cx| {
-        let mut visited = cx.visited_tys().into_iter().map(|ty| (ty, cx.ty_kind(ty))).collect::<Vec<_>>();
-        visited.sort_by(|(a,_),(b,_)| a.cmp(b));
+        let mut visited =
+            cx.visited_tys().into_iter().map(|ty| (ty, cx.ty_kind(ty))).collect::<Vec<_>>();
+        visited.sort_by(|(a, _), (b, _)| a.cmp(b));
         visited
     })
 }
@@ -202,8 +202,12 @@ pub fn visited_tys() -> Vec<(Ty, ty::TyKind)> {
 #[allow(rustc::potential_query_instability)] // result is sorted and thus deterministic
 pub fn visited_alloc_ids() -> Vec<(mir::alloc::AllocId, mir::alloc::GlobalAlloc)> {
     with(|cx| {
-        let mut visited = cx.visited_alloc_ids().into_iter().map(|id| (id, cx.global_alloc(id))).collect::<Vec<_>>();
-        visited.sort_by(|(a,_),(b,_)| a.cmp(b));
+        let mut visited = cx
+            .visited_alloc_ids()
+            .into_iter()
+            .map(|id| (id, cx.global_alloc(id)))
+            .collect::<Vec<_>>();
+        visited.sort_by(|(a, _), (b, _)| a.cmp(b));
         visited
     })
 }
