@@ -244,9 +244,9 @@ pub trait Context {
     /// Get the resulting type of unary operation.
     fn unop_ty(&self, un_op: UnOp, arg: Ty) -> Ty;
 
-    fn add_visited_ty(&self, val: Ty);
+    fn add_visited_ty(&self, val: Ty) -> bool;
 
-    fn add_visited_alloc_id(&self, val: AllocId);
+    fn add_visited_alloc_id(&self, val: AllocId) -> bool;
 
     /// Get underlying `TyKind`s for all `Ty`s visited during serialization
     fn visited_tys(&self) -> fx::FxHashSet<Ty>;

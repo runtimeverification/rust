@@ -783,12 +783,12 @@ impl<'tcx> Context for TablesWrapper<'tcx> {
         ty.stable(&mut *tables)
     }
 
-    fn add_visited_ty(&self, val: Ty) {
-        self.0.borrow_mut().visited_tys.insert(val);
+    fn add_visited_ty(&self, val: Ty) -> bool {
+        self.0.borrow_mut().visited_tys.insert(val)
     }
 
-    fn add_visited_alloc_id(&self, val: stable_mir::mir::alloc::AllocId) {
-        self.0.borrow_mut().visited_alloc_ids.insert(val);
+    fn add_visited_alloc_id(&self, val: stable_mir::mir::alloc::AllocId) -> bool {
+        self.0.borrow_mut().visited_alloc_ids.insert(val)
     }
 
     fn visited_tys(&self) -> fx::FxHashSet<Ty> {
