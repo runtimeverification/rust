@@ -3,6 +3,7 @@ use super::{
     with, DefId, Error, Symbol,
 };
 use crate::abi::{FnAbi, Layout};
+use crate::compiler_interface::Context;
 use crate::crate_def::{CrateDef, CrateDefType};
 use crate::mir::alloc::{read_target_int, read_target_uint, AllocId};
 use crate::mir::mono::StaticDef;
@@ -20,8 +21,19 @@ impl Serialize for Ty {
     where
         S: Serializer,
     {
-        with(|cx| cx.add_visited_ty(*self));
+        with(|cx| add_visited_tys(cx, *self));
         serializer.serialize_newtype_struct("Ty", &self.0)
+    }
+}
+
+fn add_visited_tys(cx: &dyn Context, val: Ty) {
+    use RigidTy::*;
+    if cx.add_visited_ty(val) {
+        match val.kind() {
+            TyKind::RigidTy(Array(ty, _) | Pat(ty, _) | Slice(ty) | RawPtr(ty, _) | Ref(_, ty, _)) => add_visited_tys(cx, ty),
+            TyKind::RigidTy(Tuple(tys)) => tys.into_iter().for_each(|ty| add_visited_tys(cx, ty)),
+            _ => {}
+        }
     }
 }
 
